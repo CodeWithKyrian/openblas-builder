@@ -34,9 +34,33 @@ jobs:
         make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} FC=gfortran
         make PREFIX=$PWD/install install 
 
-    - name: Save OpenBLAS
+    - name: Compress to Tarball
+      run: |
+        # Determine the appropriate suffixes based on openmp and target values
+        if [[ "${{matrix.openmp}}" -eq 0 ]]; then
+            openmp_suffix="serial"
+        else
+            openmp_suffix="openmp"
+        fi
+
+        if [[ "${{matrix.target}}" == "VORTEX" ]]; then
+            target_suffix="arm64"
+        else
+            target_suffix="x86_64"
+        fi
+
+        # Combine suffixes and create the artifact filename
+        filename="openblas-${openmp_suffix}-${target_suffix}.tar.gz"
+
+        # Compress the install directory
+        tar -czvf "$filename" install
+
+        # Move the compressed file to the GitHub workspace
+        mv "$filename" $GITHUB_WORKSPACE
+
+    - name: Upload OpenBLAS
       uses: actions/upload-artifact@v4
       with:
-        name: openblas-${{matrix.openmp}}-${{matrix.target}}
-        path: install
+        name: openblas-${openmp_suffix}-${target_suffix}
+        path: openblas-${openmp_suffix}-${target_suffix}.tar.gz
 
