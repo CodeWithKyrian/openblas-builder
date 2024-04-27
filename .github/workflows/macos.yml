@@ -31,7 +31,7 @@ jobs:
         export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
         export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
         export CC="/opt/homebrew/opt/llvm/bin/clang"
-        make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} FC=gfortran
+        make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} NUM_THREADS=56 FC=gfortran libs netlib shared
         make PREFIX=$PWD/install install 
 
     - name: Compress to Tarball
@@ -59,5 +59,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: openblas-"$OPENMP_SUFFIX"-"$TARGET_SUFFIX"
-        path: openblas-"$OPENMP_SUFFIX"-"$TARGET_SUFFIX".tar.gz
+        path: ${{ github.workspace }}/*.tar.gz
 
