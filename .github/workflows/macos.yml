@@ -38,19 +38,19 @@ jobs:
       run: |
         # Determine the appropriate suffixes based on openmp and target values
         if [[ "${{matrix.openmp}}" -eq 0 ]]; then
-            openmp_suffix="serial"
+            echo "OPENMP_SUFFIX=serial" >> "$GITHUB_ENV"
         else
-            openmp_suffix="openmp"
+            echo "OPENMP_SUFFIX=openmp" >> "$GITHUB_ENV"
         fi
 
         if [[ "${{matrix.target}}" == "VORTEX" ]]; then
-            target_suffix="arm64"
+            echo "TARGET_SUFFIX=arm64" >> "$GITHUB_ENV"
         else
-            target_suffix="x86_64"
+            echo "TARGET_SUFFIX=x86_64" >> "$GITHUB_ENV"
         fi
 
         # Combine suffixes and create the artifact filename
-        filename="openblas-${openmp_suffix}-${target_suffix}.tar.gz"
+        filename="openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX}.tar.gz"
 
         # Compress the install directory
         tar -czvf "$filename" install
@@ -58,6 +58,6 @@ jobs:
     - name: Upload OpenBLAS
       uses: actions/upload-artifact@v4
       with:
-        name: openblas-${openmp_suffix}-${target_suffix}
-        path: openblas-${openmp_suffix}-${target_suffix}.tar.gz
+        name: openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX}
+        path: openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX}.tar.gz
 
