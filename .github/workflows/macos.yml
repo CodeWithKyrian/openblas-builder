@@ -58,6 +58,6 @@ jobs:
     - name: Upload OpenBLAS
       uses: actions/upload-artifact@v4
       with:
-        name: openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX}
-        path: openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX}.tar.gz
+        name: openblas-"$OPENMP_SUFFIX"-"$TARGET_SUFFIX"
+        path: openblas-"$OPENMP_SUFFIX"-"$TARGET_SUFFIX".tar.gz
 
