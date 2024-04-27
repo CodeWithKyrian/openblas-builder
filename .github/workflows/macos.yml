@@ -35,18 +35,19 @@ jobs:
         make PREFIX=$PWD/install install 
 
     - name: Compress to Tarball
+      id: compressor
       run: |
         # Determine the appropriate suffixes based on openmp and target values
         if [[ "${{matrix.openmp}}" -eq 0 ]]; then
-            echo "OPENMP_SUFFIX=serial" >> "$GITHUB_ENV"
+            echo "OPENMP_SUFFIX=serial" >> "$GITHUB_OUTPUT"
         else
-            echo "OPENMP_SUFFIX=openmp" >> "$GITHUB_ENV"
+            echo "OPENMP_SUFFIX=openmp" >> "$GITHUB_OUTPUT"
         fi
 
         if [[ "${{matrix.target}}" == "VORTEX" ]]; then
-            echo "TARGET_SUFFIX=arm64" >> "$GITHUB_ENV"
+            echo "TARGET_SUFFIX=arm64" >> "$GITHUB_OUTPUT"
         else
-            echo "TARGET_SUFFIX=x86_64" >> "$GITHUB_ENV"
+            echo "TARGET_SUFFIX=x86_64" >> "$GITHUB_OUTPUT"
         fi
 
         # Combine suffixes and create the artifact filename
@@ -58,6 +59,6 @@ jobs:
     - name: Upload OpenBLAS
       uses: actions/upload-artifact@v4
       with:
-        name: openblas-${{OPENMP_SUFFIX}}-${{TARGET_SUFFIX}}
+        name: openblas=${{ steps.compressor.outputs.OPENMP_SUFFIX }}-${{ steps.compressor.outputs.TARGET_SUFFIX }}
         path: ${{ github.workspace }}/*.tar.gz
 
