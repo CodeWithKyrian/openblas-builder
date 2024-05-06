@@ -55,7 +55,7 @@ jobs:
     - name: Compress to Tarball
       id: compressor
       run: |
-        tar -czvf openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}.tar.gz $PWD/openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}
+        tar -czvf openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}.tar.gz openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}
 
     - name: Upload OpenBLAS
       uses: actions/upload-artifact@v4
