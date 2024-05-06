@@ -1,9 +1,12 @@
 name: Build for macOS
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'OpenBLAS Version to Build (e.g. v0.3.27)'
+        required: true
+        default: 'v0.3.27'
 
 jobs:
   build:
@@ -18,6 +21,7 @@ jobs:
     - name: Checkout Repository
       with:
         repository: OpenMathLib/OpenBLAS
+        ref: ${{ github.event.inputs.version }}
       uses: actions/checkout@v4
 
     - name: Install Dependencies
@@ -27,17 +31,8 @@ jobs:
         brew install llvm
 
     - name: Build OpenBLAS
+      id: builder
       run: |
-        export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
-        export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
-        export CC="/opt/homebrew/opt/llvm/bin/clang"
-        make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} NUM_THREADS=56 FC=gfortran libs netlib shared
-        make PREFIX=$PWD/install install 
-
-    - name: Compress to Tarball
-      id: compressor
-      run: |
-        # Determine the appropriate suffixes based on openmp and target values
         if [[ "${{matrix.openmp}}" -eq 0 ]]; then
             echo "OPENMP_SUFFIX=serial" >> "$GITHUB_OUTPUT"
         else
@@ -49,16 +44,22 @@ jobs:
         else
             echo "TARGET_SUFFIX=x86_64" >> "$GITHUB_OUTPUT"
         fi
+        
+        
+        export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
+        export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
+        export CC="/opt/homebrew/opt/llvm/bin/clang"
+        make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} NUM_THREADS=56 FC=gfortran libs netlib shared
+        make PREFIX=$PWD/openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX} install
 
-        # Combine suffixes and create the artifact filename
-        filename="openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX}.tar.gz"
-
-        # Compress the install directory
-        tar -czvf "$filename" install
+    - name: Compress to Tarball
+      id: compressor
+      run: |
+        tar -czvf openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}.tar.gz $PWD/openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}
 
     - name: Upload OpenBLAS
       uses: actions/upload-artifact@v4
       with:
-        name: openblas=${{ steps.compressor.outputs.OPENMP_SUFFIX }}-${{ steps.compressor.outputs.TARGET_SUFFIX }}
+        name: openblas-${{ steps.compressor.outputs.OPENMP_SUFFIX }}-${{ steps.compressor.outputs.TARGET_SUFFIX }}-{{ github.event.inputs.version }}
         path: ${{ github.workspace }}/*.tar.gz
 

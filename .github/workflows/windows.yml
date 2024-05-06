@@ -1,0 +1,61 @@
+name: Build for Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'OpenBLAS Version to Build (e.g. v0.3.27)'
+        required: true
+        default: 'v0.3.27'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        openmp: [0, 1]
+        target: [x86_64, aarch64]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: OpenMathLib/OpenBLAS
+          ref: ${{ github.event.inputs.version }}
+
+      - name: Install Dependencies
+        run: |
+          choco install -y msys2
+          refreshenv
+          
+          # Update msys2 and install dependencies
+          msys2 -c 'pacman -Syu --noconfirm'
+          msys2 -c 'pacman -S --noconfirm gcc-fortran mingw-w64-${{ matrix.target }}-cmake mingw-w64-${{ matrix.target }}-openblas'
+          
+          # Create symbolic links for the gcc and gfortran binaries
+          ln -s /mingw64/bin/gcc.exe /usr/bin/gcc
+          ln -s /mingw64/bin/gfortran.exe /usr/bin/gfortran
+
+      - name: Build OpenBLAS
+        id: builder
+        run: |
+          if [[ "${{ matrix.openmp }}" -eq 0 ]]; then
+              echo "OPENMP_SUFFIX=serial" >> "$GITHUB_OUTPUT"
+          else
+              echo "OPENMP_SUFFIX=openmp" >> "$GITHUB_OUTPUT"
+          fi
+          
+          echo "TARGET_SUFFIX=${{ matrix.target }}" >> "$GITHUB_OUTPUT"
+          
+          make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{ matrix.openmp }} TARGET=${{ matrix.target }} NUM_THREADS=56 FC=gfortran libs netlib shared
+          make PREFIX=$PWD/openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }} install
+
+      - name: Compress to Tarball
+        run: |
+          tar -czvf openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}.tar.gz openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}
+
+      - name: Upload OpenBLAS
+        uses: actions/upload-artifact@v4
+        with:
+          name: openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}-{{ github.event.inputs.version }}
+          path: openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}.tar.gz
