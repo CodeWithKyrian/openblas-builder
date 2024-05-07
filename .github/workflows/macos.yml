@@ -27,8 +27,36 @@ jobs:
     - name: Install Dependencies
       run: |
         brew reinstall gcc
-        brew install coreutils cmake
+        brew install coreutils cmake ccache
         brew install llvm
+
+    - name: Compilation cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.ccache
+        # We include the commit sha in the cache key, as new cache entries are
+        # only created if there is no existing entry for the key yet.
+        # GNU make and cmake call the compilers differently. It looks like
+        # that causes the cache to mismatch. Keep the ccache for both build
+        # tools separate to avoid polluting each other.
+        key: ccache-macos-latest-make-${{ github.ref }}-${{ github.sha }}
+        # Restore a matching ccache cache entry. Prefer same branch and same Fortran compiler.
+        restore-keys: |
+          ccache-macos-latest-make-${{ github.ref }}
+          ccache-macos-latest-make
+          ccache-macos-latest
+
+    - name: Configure ccache
+      run: |
+        # Add ccache to path
+        echo "$(brew --prefix)/opt/ccache/libexec" >> $GITHUB_PATH
+        echo "/opt/homebrew/opt/llvm/bin" >>$GITHUB_PATH
+        echo "" >>$GITHUB_PATH
+        # Limit the maximum size and switch on compression to avoid exceeding the total disk or cache quota (5 GB).
+        test -d ~/.ccache || mkdir -p ~/.ccache
+        echo "max_size = 300M" > ~/.ccache/ccache.conf
+        echo "compression = true" >> ~/.ccache/ccache.conf
+        ccache -s
 
     - name: Build OpenBLAS
       id: builder
@@ -49,8 +77,12 @@ jobs:
         export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
         export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
         export CC="/opt/homebrew/opt/llvm/bin/clang"
-        make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} NUM_THREADS=56 FC=gfortran libs netlib shared
-        make PREFIX=$PWD/openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX} install
+        make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} NUM_THREADS=56 FC="ccache gfortran" libs netlib shared
+        make PREFIX=$PWD/openblas-${{OPENMP_SUFFIX}}-${{TARGET_SUFFIX}} install
+
+    - name: Show ccache status
+      continue-on-error: true
+      run: ccache -s
 
     - name: Compress to Tarball
       id: compressor
