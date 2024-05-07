@@ -62,15 +62,19 @@ jobs:
       id: builder
       run: |
         if [[ "${{matrix.openmp}}" -eq 0 ]]; then
-            echo "OPENMP_SUFFIX=serial" >> "$GITHUB_OUTPUT"
+          echo "OPENMP_SUFFIX=serial" >> "$GITHUB_OUTPUT"
+          export OPENMP_SUFFIX="serial"
         else
-            echo "OPENMP_SUFFIX=openmp" >> "$GITHUB_OUTPUT"
+          echo "OPENMP_SUFFIX=openmp" >> "$GITHUB_OUTPUT"
+          export OPENMP_SUFFIX="openmp"
         fi
 
         if [[ "${{matrix.target}}" == "VORTEX" ]]; then
-            echo "TARGET_SUFFIX=arm64" >> "$GITHUB_OUTPUT"
+          echo "TARGET_SUFFIX=arm64" >> "$GITHUB_OUTPUT"
+          export TARGET_SUFFIX="arm64"
         else
-            echo "TARGET_SUFFIX=x86_64" >> "$GITHUB_OUTPUT"
+          echo "TARGET_SUFFIX=x86_64" >> "$GITHUB_OUTPUT"
+          export TARGET_SUFFIX="x86_64"
         fi
         
         
@@ -78,7 +82,7 @@ jobs:
         export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
         export CC="/opt/homebrew/opt/llvm/bin/clang"
         make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} TARGET=${{matrix.target}} NUM_THREADS=56 FC="ccache gfortran" libs netlib shared
-        make PREFIX=$PWD/openblas-${{OPENMP_SUFFIX}}-${{TARGET_SUFFIX}} install
+        make PREFIX=$PWD/openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX} install
 
     - name: Show ccache status
       continue-on-error: true
