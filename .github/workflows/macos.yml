@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'OpenBLAS Version to Build (e.g. v0.3.27)'
+        description: 'OpenBLAS Version to Build'
         required: true
         default: 'v0.3.27'
 
@@ -96,6 +96,6 @@ jobs:
     - name: Upload OpenBLAS
       uses: actions/upload-artifact@v4
       with:
-        name: openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}-${{ github.event.inputs.version }}
+        name: openblas-osx-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ steps.builder.outputs.TARGET_SUFFIX }}-${{ github.event.inputs.version }}
         path: ${{ github.workspace }}/*.tar.gz
 
