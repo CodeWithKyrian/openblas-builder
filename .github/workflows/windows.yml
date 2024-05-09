@@ -39,7 +39,7 @@ jobs:
       - name: Configure OpenBLAS
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON -DDYNAMIC_ARCH=ON -DUSE_OPENMP=${{ matrix.openmp }} -DUSE_THREAD=ON -DNUM_THREADS=64 -DTARGET=CORE2 -DBINARY=64 -DINTERFACE64=1 ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDYNAMIC_ARCH=ON -DUSE_OPENMP=${{ matrix.openmp }} -DUSE_THREAD=ON -DNUM_THREADS=64 -DTARGET=CORE2 -DBINARY=64 -DINTERFACE64=1 ..
 
       - name: Build OpenBLAS
         run: |
