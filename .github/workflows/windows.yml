@@ -13,7 +13,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        openmp: [OFF, ON]
+        openmp: [0, 1]
 
     steps:
       - name: Checkout Repository
@@ -39,16 +39,7 @@ jobs:
       - name: Configure OpenBLAS
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release \
-                -DBUILD_SHARED_LIBS=ON \
-                -DBUILD_STATIC_LIBS=ON \
-                -DDYNAMIC_ARCH=ON \
-                -DUSE_OPENMP=${{ matrix.openmp }} \
-                -DUSE_THREAD=ON \
-                -DNUM_THREADS=64 \
-                -DTARGET=CORE2 \
-                -DBINARY=64 -DINTERFACE64=1 \
-                ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON -DDYNAMIC_ARCH=ON -DUSE_OPENMP=${{ matrix.openmp }} -DUSE_THREAD=ON -DNUM_THREADS=64 -DTARGET=CORE2 -DBINARY=64 -DINTERFACE64=1 ..
 
       - name: Build OpenBLAS
         run: |
@@ -59,7 +50,7 @@ jobs:
       - name: Compress to Tarball
         id: compressor
         run: |
-          if [[ "${{ matrix.openmp }}" -eq OFF ]]; then
+          if [[ "${{ matrix.openmp }}" -eq 0 ]]; then
             echo "OPENMP_SUFFIX=serial" >> "$GITHUB_OUTPUT"
             export OPENMP_SUFFIX="serial"
           else
