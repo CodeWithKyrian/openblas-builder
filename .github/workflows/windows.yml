@@ -13,7 +13,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        openmp: [0, 1]
+        openmp: [OFF, ON]
 
     steps:
       - name: Checkout Repository
@@ -22,23 +22,75 @@ jobs:
           repository: OpenMathLib/OpenBLAS
           ref: ${{ github.event.inputs.version }}
 
-      - name: Install Dependencies
+      - name: Install Build Dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          release: false  # Use pre-installed version
+          install: >-
+            base-devel
+            mingw-w64-ucrt-x86_64-cc
+            mingw-w64-ucrt-x86_64-fc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-ccache
+
+      - name: Prepare ccache
+        id: ccache-prepare
         run: |
-          choco install -y msys2
-          refreshenv
-          
-          # Update msys2 and install dependencies
-          msys2 -c 'pacman -Syu --noconfirm'
-          msys2 -c 'pacman -S --noconfirm gcc-fortran make'
-          
-          # Create symbolic links for the gcc and gfortran binaries
-          ln -s /mingw64/bin/gcc.exe /usr/bin/gcc
-          ln -s /mingw64/bin/gfortran.exe /usr/bin/gfortran
+          echo "ccachedir=$(cygpath -m $(ccache -k cache_dir))" >> $GITHUB_OUTPUT
+          # We include the commit sha in the cache key, as new cache entries are
+          # only created if there is no existing entry for the key yet.
+          echo "key=ccache-msys2-UCRT64-${{ github.ref }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v3
+        with:
+          path: ${{ steps.ccache-prepare.outputs.ccachedir }}
+          key: ${{ steps.ccache-prepare.outputs.key }}
+          restore-keys: |
+            ccache-msys2-UCRT64-${{ github.ref }}
+            ccache-msys2-UCRT64
+
+      - name: Configure ccache
+        # Limit the maximum size and switch on compression to avoid exceeding the total disk or cache quota.
+        run: |
+          which ccache
+          test -d ${{ steps.ccache-prepare.outputs.ccachedir }} || mkdir -p ${{ steps.ccache-prepare.outputs.ccachedir }}
+          echo "max_size = 250M" > ${{ steps.ccache-prepare.outputs.ccachedir }}/ccache.conf
+          echo "compression = true" >> ${{ steps.ccache-prepare.outputs.ccachedir }}/ccache.conf
+          ccache -p
+          ccache -s
+          echo $HOME
+          cygpath -w $HOME
+
+      - name: Configure OpenBLAS
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=ON \
+              -DBUILD_STATIC_LIBS=ON \
+              -DDYNAMIC_ARCH=ON \
+              -DUSE_OPENMP=${{ matrix.openmp }} \
+              -DUSE_THREAD=ON \
+              -DNUM_THREADS=64 \
+              -DTARGET=CORE2 \
+              -DBINARY=64 -DINTERFACE64=1 \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+              ..
 
       - name: Build OpenBLAS
-        id: builder
         run: |
-          if [[ "${{ matrix.openmp }}" -eq 0 ]]; then
+          cd build && cmake --build .
+          cmake --install . --prefix install
+          ccache -s
+
+      - name: Compress to Tarball
+        id: compressor
+        run: |
+          if [[ "${{ matrix.openmp }}" -eq OFF ]]; then
             echo "OPENMP_SUFFIX=serial" >> "$GITHUB_OUTPUT"
             export OPENMP_SUFFIX="serial"
           else
@@ -46,15 +98,10 @@ jobs:
             export OPENMP_SUFFIX="openmp"
           fi
           
-          make -j$(nproc) DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=${{ matrix.openmp }} TARGET=GENERIC NUM_THREADS=64 CONSISTENT_FPCSR=1libs netlib shared
-          make PREFIX=$PWD/openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }} install
-
-      - name: Compress to Tarball
-        run: |
-          tar -czvf openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}.tar.gz openblas-${{ steps.builder.outputs.OPENMP_SUFFIX }}
+          tar -czvf openblas-windows-${OPENMP_SUFFIX}.tar.gz build/install
 
       - name: Upload OpenBLAS
         uses: actions/upload-artifact@v4
         with:
-          name: openblas-windows-${{ steps.builder.outputs.OPENMP_SUFFIX }}-${{ github.event.inputs.version }}
-          path: ${{ github.workspace }}/*.tar.gz
+            name: openblas-windows-${{ steps.compressor.outputs.OPENMP_SUFFIX }}-${{ github.event.inputs.version }}
+            path: ${{ github.workspace }}/*.tar.gz
