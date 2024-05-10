@@ -45,7 +45,6 @@ jobs:
         run: |
           cd build && cmake --build .
           cmake --install . --prefix install
-          ccache -s
 
       - name: Compress to Tarball
         id: compressor
