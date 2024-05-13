@@ -47,7 +47,7 @@ jobs:
             export TARGET_SUFFIX="armv8"
           fi
           
-          make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{ matrix.openmp }} TARGET=${{ matrix.target }} NUM_THREADS=64 FC=gfortran libs netlib shared
+          make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{ matrix.openmp }} TARGET=${{ matrix.target }} NUM_THREADS=64 ONLY_CBLAS=1 libs shared
           make PREFIX=$PWD/openblas-${OPENMP_SUFFIX}-${TARGET_SUFFIX} install
 
       - name: Compress to Tarball
