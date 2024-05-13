@@ -39,12 +39,12 @@ jobs:
       - name: Configure OpenBLAS
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDYNAMIC_ARCH=ON -DUSE_OPENMP=${{ matrix.openmp }} -DUSE_THREAD=ON -DNUM_THREADS=64 -DTARGET=CORE2 -DBINARY=64 -DINTERFACE64=1 ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDYNAMIC_ARCH=ON -DUSE_OPENMP=${{ matrix.openmp }} -DUSE_THREAD=ON -DNUM_THREADS=64 -DTARGET=CORE2 -DBINARY=64 -DINTERFACE64=1 -DONLY_CBLAS=1 ..
 
       - name: Build OpenBLAS
         run: |
           cd build && cmake --build .
-          cmake --install . --prefix install
+          cmake --install . --config Release --prefix install_${{ matrix.openmp }}
 
       - name: Compress to Tarball
         id: compressor
@@ -57,7 +57,7 @@ jobs:
             export OPENMP_SUFFIX="openmp"
           fi
           
-          tar -czvf openblas-windows-${OPENMP_SUFFIX}.tar.gz build/install
+          tar -czvf openblas-windows-${OPENMP_SUFFIX}.tar.gz build/install_${{ matrix.openmp }}
 
       - name: Upload OpenBLAS
         uses: actions/upload-artifact@v4
