@@ -15,6 +15,11 @@ jobs:
       matrix:
         openmp: [0, 1]
 
+    defaults:
+      run:
+        # Use MSYS2 bash as default shell
+        shell: msys2 {0}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -39,7 +44,7 @@ jobs:
       - name: Configure OpenBLAS
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDYNAMIC_ARCH=ON -DUSE_OPENMP=${{ matrix.openmp }} -DUSE_THREAD=ON -DNUM_THREADS=64 -DTARGET=CORE2 -DBINARY=64 -DINTERFACE64=1 -DONLY_CBLAS=1 ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DDYNAMIC_ARCH=ON -DUSE_OPENMP=${{ matrix.openmp }} -DUSE_THREAD=ON -DNUM_THREADS=64 -DTARGET=CORE2  -DONLY_CBLAS=1 ..
 
       - name: Build OpenBLAS
         run: |
