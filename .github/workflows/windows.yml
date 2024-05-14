@@ -49,7 +49,7 @@ jobs:
       - name: Build OpenBLAS
         run: |
           cd build && cmake --build .
-#          cmake --install . --config Release --prefix install_${{ matrix.openmp }}
+          cmake --install . --config Release --prefix install
 
       - name: Compress to Tarball
         id: compressor
@@ -62,7 +62,7 @@ jobs:
             export OPENMP_SUFFIX="openmp"
           fi
           
-          tar -czvf openblas-windows-${OPENMP_SUFFIX}.tar.gz build
+          tar -czvf openblas-windows-${OPENMP_SUFFIX}.tar.gz build/install
 
       - name: Upload OpenBLAS
         uses: actions/upload-artifact@v4
